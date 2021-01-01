@@ -21,6 +21,8 @@ def main():
 
     packet_size = []
 
+    df_counter = 0
+
     conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
 
     try:
@@ -35,10 +37,14 @@ def main():
             if eth_proto == 8:
                 packet_size.append(len(data))
 
-                (version, header_length, ttl, proto, src, target, data) = ipv4_packet(data)
+                (version, header_length, flag_df, ttl, proto, src, target, data) = ipv4_packet(data)
                 print(TAB_1 + 'IPv4 Packet: ')
-                print(TAB_2 + 'Version: {}, Header Length: {}, TTL: {},'.format(version, header_length, ttl))
+                print(TAB_2 + 'Version: {}, Header Length: {}, DF: {}, TTL: {},'.format(version, header_length, flag_df,
+                                                                                        ttl))
                 print(TAB_2 + 'Protocol: {}, Source: {}, Target: {},'.format(proto, src, target))
+
+                if flag_df == 1:
+                    df_counter += 1
 
                 if src in sender_packet_counter:
                     sender_packet_counter[src] += 1
@@ -83,11 +89,21 @@ def main():
             else:
                 print('It is not IPv4 packet')
     except KeyboardInterrupt:
-        print('\nICMP: ', icmp_counter)
-        print('UDP: ', udp_counter)
-        print('TCP: ', tcp_counter)
-        print(sender_packet_counter)
-        print(packet_size)
+        file = open('result.txt', 'w')
+        file.write('Number of ICMP packets: {}'.format(icmp_counter))
+        file.write('\nNumber of UDP packets: {}'.format(udp_counter))
+        file.write('\nNumber of TCP packets: {}'.format(tcp_counter))
+        file.write('\nNumber of fragmented packets: {}'.format(len(packet_size) - df_counter))
+        file.write('\nMaximum packet length: {} byte'.format(max(packet_size)))
+        file.write('\nMinimum packet length: {} byte'.format(min(packet_size)))
+        file.write('\nAverage packet length: {} byte'.format(sum(packet_size) / len(packet_size)))
+
+        sorted_sender = sorted(sender_packet_counter.items(), key=
+        lambda kv: (kv[1], kv[0]), reverse=True)
+        file.write('\nThe IP addresses of the senders are in descending order of the number of packets sent:\n' + str(
+            sorted_sender))
+
+        file.close()
 
 
 # Unpack ethernet frame
@@ -107,8 +123,11 @@ def ipv4_packet(data):
     version_header_length = data[0]
     version = version_header_length >> 4
     header_length = (version_header_length & 15) * 4
-    ttl, proto, src, target = struct.unpack('! 8x B B 2x 4s 4s', data[:20])
-    return version, header_length, ttl, proto, ipv4(src), ipv4(target), data[header_length:]
+    flags_fragment_offset, ttl, proto, src, target = struct.unpack('! 6x H B B 2x 4s 4s', data[:20])
+
+    flag_df = (flags_fragment_offset & 16384) >> 14
+
+    return version, header_length, flag_df, ttl, proto, ipv4(src), ipv4(target), data[header_length:]
 
 
 # Returns properly formatted IPv4 address
