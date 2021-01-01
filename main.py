@@ -83,7 +83,11 @@ def main():
             else:
                 print('It is not IPv4 packet')
     except KeyboardInterrupt:
-        print("Done")
+        print('\nICMP: ', icmp_counter)
+        print('UDP: ', udp_counter)
+        print('TCP: ', tcp_counter)
+        print(sender_packet_counter)
+        print(packet_size)
 
 
 # Unpack ethernet frame
