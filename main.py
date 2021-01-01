@@ -25,6 +25,12 @@ def main():
 
     conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
 
+    start = False
+    while not start:
+        i = input('Enter <start> to begin capturing packets and after that press ctrl + C to stop: ')
+        if i.lower() == 'start':
+            start = True
+
     try:
         while True:
             raw_data, addr = conn.recvfrom(65535)
@@ -89,18 +95,18 @@ def main():
             else:
                 print('It is not IPv4 packet')
     except KeyboardInterrupt:
-        file = open('result.txt', 'w')
+        file = open('report.txt', 'w')
         file.write('Number of ICMP packets: {}'.format(icmp_counter))
         file.write('\nNumber of UDP packets: {}'.format(udp_counter))
         file.write('\nNumber of TCP packets: {}'.format(tcp_counter))
         file.write('\nNumber of fragmented packets: {}'.format(len(packet_size) - df_counter))
-        file.write('\nMaximum packet length: {} byte'.format(max(packet_size)))
+        file.write('\n\nMaximum packet length: {} byte'.format(max(packet_size)))
         file.write('\nMinimum packet length: {} byte'.format(min(packet_size)))
         file.write('\nAverage packet length: {} byte'.format(sum(packet_size) / len(packet_size)))
 
         sorted_sender = sorted(sender_packet_counter.items(), key=
         lambda kv: (kv[1], kv[0]), reverse=True)
-        file.write('\nThe IP addresses of the senders are in descending order of the number of packets sent:\n' + str(
+        file.write('\n\nThe IP addresses of the senders are in descending order of the number of packets sent:\n' + str(
             sorted_sender))
 
         file.close()
